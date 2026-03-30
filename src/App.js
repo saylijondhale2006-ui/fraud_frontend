@@ -12,7 +12,7 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const BACKEND_URL = "http://127.0.0.1:5000";
+const BACKEND_URL= "[https://fraud-backend-uu0p.onrender.com]";
 const FRAUD_THRESHOLD = 0.15;
 
 /* ── Inject global styles ───────────────────────────────────────────────────── */
@@ -294,6 +294,11 @@ export default function App() {
 
   const [amount, setAmount] = useState("");
   const [time, setTime]     = useState("");
+  // ── NEW: V1, V2, V3 state variables ──
+  const [v1, setV1]         = useState("");
+  const [v2, setV2]         = useState("");
+  const [v3, setV3]         = useState("");
+
   const [result, setResult] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading]           = useState(false);
@@ -311,13 +316,24 @@ export default function App() {
     setError("");
     if (!amount || isNaN(+amount) || +amount <= 0) { setError("Enter a valid amount greater than 0"); return; }
     if (time === "" || isNaN(+time) || +time < 0)  { setError("Enter a valid time (seconds ≥ 0)");    return; }
+    if (v1 === "" || isNaN(+v1))  { setError("Enter a valid numeric value for V1"); return; }
+    if (v2 === "" || isNaN(+v2))  { setError("Enter a valid numeric value for V2"); return; }
+    if (v3 === "" || isNaN(+v3))  { setError("Enter a valid numeric value for V3"); return; }
+
     setLoading(true);
     let data;
     try {
       const res = await fetch(`${BACKEND_URL}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: +amount, time: +time }),
+        // ── All 5 values sent as numbers ──
+        body: JSON.stringify({
+          amount: +amount,
+          time:   +time,
+          v1:     +v1,
+          v2:     +v2,
+          v3:     +v3,
+        }),
       });
       if (!res.ok) throw new Error();
       data = await res.json();
@@ -427,7 +443,9 @@ export default function App() {
         <h2 style={{ fontSize: 12, fontWeight: 700, color: "#64748b", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 20 }}>
           Analyze Transaction
         </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
+
+        {/* Row 1: Amount + Time */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
           <div>
             <label style={{ display: "block", fontSize: 12, color: "#64748b", marginBottom: 7, fontWeight: 500 }}>Amount ($)</label>
             <input
@@ -449,6 +467,32 @@ export default function App() {
             />
           </div>
         </div>
+
+        {/* Row 2: V1, V2, V3 — 3-column grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 18 }}>
+          {[
+            { label: "V1", value: v1, setter: setV1, placeholder: "e.g. -1.36" },
+            { label: "V2", value: v2, setter: setV2, placeholder: "e.g. 0.47" },
+            { label: "V3", value: v3, setter: setV3, placeholder: "e.g. 2.53" },
+          ].map(({ label, value, setter, placeholder }) => (
+            <div key={label}>
+              <label style={{ display: "block", fontSize: 12, color: "#64748b", marginBottom: 7, fontWeight: 500 }}>
+                {label}
+                <span style={{ marginLeft: 6, fontSize: 10, color: "#475569", fontWeight: 400, fontFamily: "'Space Mono',monospace" }}>
+                  PCA feature
+                </span>
+              </label>
+              <input
+                className="input-field" type="number"
+                placeholder={placeholder}
+                value={value}
+                onChange={(e) => { setter(e.target.value); setError(""); }}
+                onKeyDown={(e) => e.key === "Enter" && checkFraud()}
+              />
+            </div>
+          ))}
+        </div>
+
         {error && (
           <p style={{ color: "#f87171", fontSize: 12, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
             ⚠ {error}
